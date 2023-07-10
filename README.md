@@ -1,0 +1,1 @@
+创建data/password.txt和data/username.txt，填入密码和用户名。
