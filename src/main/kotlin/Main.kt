@@ -52,9 +52,9 @@ class Game(
         tips.forEach {
             tipsStr += ' '
             if (it == ' ') tipsStr += "空格"
-            else tipsStr += it
+            else tipsStr += it.uppercaseChar()
         }
-        base = base.replace("%TIPS%", if (tipsStr!="") tipsStr else "无")
+        base = base.replace("%TIPS%", if (tipsStr != "") tipsStr else "无")
         this.songLib.forEach {
             base += "\n"
             if (discovered.contains(it)) {
@@ -62,7 +62,7 @@ class Game(
             } else {
                 var show = ""
                 it.name.forEach { char ->
-                    if (tips.contains(char))
+                    if (tips.contains(char.uppercaseChar()))
                         show += char
                     else
                         show += "*"
@@ -137,10 +137,14 @@ suspend fun main() {
             if (argChars == "") {
                 thisGame.tips += ' '
             } else {
-                thisGame.tips += argChars[0]
+                if (!thisGame.tips.contains(argChars[0]))
+                    thisGame.tips += argChars[0]
             }
 //            Thread.sleep((100..1000).random().toLong())
             group.sendMessage(thisGame.message())
+        } else if (message.content.startsWith("/answer")) {
+            val thisGame = games.filter { it.group == group.id }[0]
+            println(Json.encodeToString(thisGame.songLib))
         } else {
             val thisGame = games.filter { it.group == group.id }[0]
             var answer: Song? = null
