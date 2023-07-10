@@ -93,77 +93,78 @@ suspend fun main() {
     println(Json.encodeToString(songLibs))
     mainBot.login()
     mainBot.eventChannel.subscribeAlways<GroupMessageEvent> {
-        println(message.content)
-        if (message.content.startsWith("#help")) {
-            group.sendMessage(
-                """
+        if (whiteListGroup.contains(group.id)) {
+            if (message.content.startsWith("#help")) {
+                group.sendMessage(
+                    """
                     『猜歌名游戏』帮助：
                     输入/newgame <n>使用第n个歌名库开始游戏。如果当前群聊正在进行一个游戏则会拒绝请求。
                     输入/show <c>展示对应字符。特殊地，只输入/show将会展示空格。
                     直接输入歌名将会进行检查。
                 """.trimIndent()
-            )
-        } else if (message.content.startsWith("/poke")) {
-            group.sendMessage("别在这理发店")
-        } else if (message.content.startsWith("/newgame")) {
-            if (!games.none { it.group == group.id }) {
-                group.sendMessage("当前群聊正在进行游戏")
-            } else {
-                val args = message.content.substringAfter("/newgame ")
-                var songLibId = args.toIntOrNull()
-                val problems = (8..12).random()
-                if ((songLibId == null) || (songLibId >= songLibs.size)) {
-                    songLibId = (0 until songLibs.size).random()
-                }
-                var thisSongLib = songLibs[songLibId].songs
-                thisSongLib.shuffle()
-                thisSongLib = thisSongLib.slice(0 until problems step 1)
-                    .toMutableList()
-                val newGame = Game(
-                    group.id, thisSongLib,
-                    songLibId, songLibs[songLibId].name
                 )
-                games += newGame
+            } else if (message.content.startsWith("/poke")) {
+                group.sendMessage("别在这理发店")
+            } else if (message.content.startsWith("/newgame")) {
+                if (!games.none { it.group == group.id }) {
+                    group.sendMessage("当前群聊正在进行游戏")
+                } else {
+                    val args = message.content.substringAfter("/newgame ")
+                    var songLibId = args.toIntOrNull()
+                    val problems = (8..12).random()
+                    if ((songLibId == null) || (songLibId >= songLibs.size)) {
+                        songLibId = (0 until songLibs.size).random()
+                    }
+                    var thisSongLib = songLibs[songLibId].songs
+                    thisSongLib.shuffle()
+                    thisSongLib = thisSongLib.slice(0 until problems step 1)
+                        .toMutableList()
+                    val newGame = Game(
+                        group.id, thisSongLib,
+                        songLibId, songLibs[songLibId].name
+                    )
+                    games += newGame
 //                Thread.sleep((100..200).random().toLong())
-                group.sendMessage("开始游戏！")
-                group.sendMessage(newGame.message())
+                    group.sendMessage("开始游戏！")
+                    group.sendMessage(newGame.message())
 //                Thread.sleep((100..1000).random().toLong())
-                println(newGame.songLib)
-            }
-        } else if (message.content.startsWith("/show")) {
-            val thisGame = games.filter { it.group == group.id }[0]
-            val args = message.content.substringAfter("/show")
-            val argChars = args.filter { it != ' ' }
-            if (argChars == "") {
-                thisGame.tips += ' '
-            } else {
-                if (!thisGame.tips.contains(argChars[0]))
-                    thisGame.tips += argChars[0]
-            }
+                    println(newGame.songLib)
+                }
+            } else if (message.content.startsWith("/show")) {
+                val thisGame = games.filter { it.group == group.id }[0]
+                val args = message.content.substringAfter("/show")
+                val argChars = args.filter { it != ' ' }
+                if (argChars == "") {
+                    thisGame.tips += ' '
+                } else {
+                    if (!thisGame.tips.contains(argChars[0]))
+                        thisGame.tips += argChars[0]
+                }
 //            Thread.sleep((100..1000).random().toLong())
-            group.sendMessage(thisGame.message())
-        } else if (message.content.startsWith("/answer")) {
-            val thisGame = games.filter { it.group == group.id }[0]
-            println(Json.encodeToString(thisGame.songLib))
-        } else {
-            val thisGame = games.filter { it.group == group.id }[0]
-            var answer: Song? = null
-            thisGame.songLib.forEach {
-                if (it.name.uppercase(Locale.getDefault()) ==
-                    message.content.uppercase(Locale.getDefault())
-                    && (!thisGame.discovered.contains(it))
-                )
-                    answer = it
-            }
-            if (answer != null) {
-                thisGame.discovered += answer!!
-//                Thread.sleep((100..500).random().toLong())
-                group.sendMessage("\"${answer!!.name}\" 正确！")
-//                Thread.sleep((100..1000).random().toLong())
                 group.sendMessage(thisGame.message())
-                if (thisGame.discovered.size == thisGame.songLib.size) {
-                    group.sendMessage("游戏结束")
-                    games.remove(thisGame)
+            } else if (message.content.startsWith("/answer")) {
+                val thisGame = games.filter { it.group == group.id }[0]
+                println(Json.encodeToString(thisGame.songLib))
+            } else {
+                val thisGame = games.filter { it.group == group.id }[0]
+                var answer: Song? = null
+                thisGame.songLib.forEach {
+                    if (it.name.uppercase(Locale.getDefault()) ==
+                        message.content.uppercase(Locale.getDefault())
+                        && (!thisGame.discovered.contains(it))
+                    )
+                        answer = it
+                }
+                if (answer != null) {
+                    thisGame.discovered += answer!!
+//                Thread.sleep((100..500).random().toLong())
+                    group.sendMessage("\"${answer!!.name}\" 正确！")
+//                Thread.sleep((100..1000).random().toLong())
+                    group.sendMessage(thisGame.message())
+                    if (thisGame.discovered.size == thisGame.songLib.size) {
+                        group.sendMessage("游戏结束")
+                        games.remove(thisGame)
+                    }
                 }
             }
         }
