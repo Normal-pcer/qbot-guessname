@@ -3,12 +3,11 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import net.mamoe.mirai.BotFactory
-import net.mamoe.mirai.auth.BotAuthorization
 import net.mamoe.mirai.event.events.GroupMessageEvent
 import net.mamoe.mirai.message.data.content
 import net.mamoe.mirai.utils.BotConfiguration
 import java.io.File
-import java.util.*
+import kotlin.math.abs
 
 inline fun <reified T> load(filename: String, default: () -> T): T {
     if (!File("data").exists()) {
@@ -26,16 +25,12 @@ inline fun <reified T> load(filename: String, default: () -> T): T {
 
 @Serializable
 class Lib(
-    val songs: MutableList<Song>,
-    val name: String
+    val songs: MutableList<Song>, val name: String
 )
 
 @Serializable
 class Game(
-    val group: Long,
-    val songLib: MutableList<Song>,
-    private val libId: Int,
-    private val libName: String
+    val group: Long, val songLib: MutableList<Song>, private val libId: Int, private val libName: String
 ) {
     val discovered: MutableList<Song> = mutableListOf()
     val tips: MutableList<Char> = mutableListOf()
@@ -52,7 +47,7 @@ class Game(
         tips.forEach {
             tipsStr += ' '
             if (it == ' ') tipsStr += "空格"
-            else tipsStr += it.uppercaseChar()
+            else tipsStr += it
         }
         base = base.replace("%TIPS%", if (tipsStr != "") tipsStr else "无")
         this.songLib.forEach {
@@ -62,10 +57,8 @@ class Game(
             } else {
                 var show = ""
                 it.name.forEach { char ->
-                    if (tips.contains(char.uppercaseChar()))
-                        show += char
-                    else
-                        show += "*"
+                    if (tips.contains(char.uppercaseChar())) show += char
+                    else show += "*"
                 }
                 base += show
             }
@@ -85,6 +78,20 @@ val mainBot = BotFactory.newBot(qqId, pass) {
 }
 val games = mutableListOf<Game>()
 var songLibs = mutableListOf<Lib>()
+
+fun check(input: String, ans: String): Boolean {
+    if (abs(input.length - ans.length) * 1.0 / ans.length >= 0.2) return false
+    var sameChars = 0
+    var inputUpper = input.uppercase()
+    ans.forEach {
+        if (inputUpper.contains(it.uppercaseChar())) {
+            sameChars += 1
+            val index = (inputUpper.indexOf(it.uppercaseChar()))
+            inputUpper = inputUpper.substring(0, index) + inputUpper.substring(index + 1)
+        }
+    }
+    return sameChars * 1.0 / ans.length >= 0.8
+}
 
 suspend fun main() {
     songLibs = load("songLibs.json") {
@@ -117,11 +124,9 @@ suspend fun main() {
                     }
                     var thisSongLib = songLibs[songLibId].songs
                     thisSongLib.shuffle()
-                    thisSongLib = thisSongLib.slice(0 until problems step 1)
-                        .toMutableList()
+                    thisSongLib = thisSongLib.slice(0 until problems step 1).toMutableList()
                     val newGame = Game(
-                        group.id, thisSongLib,
-                        songLibId, songLibs[songLibId].name
+                        group.id, thisSongLib, songLibId, songLibs[songLibId].name
                     )
                     games += newGame
 //                Thread.sleep((100..200).random().toLong())
@@ -137,9 +142,9 @@ suspend fun main() {
                 if (argChars == "") {
                     thisGame.tips += ' '
                 } else {
-                    if (!thisGame.tips.contains(argChars[0]))
-                        thisGame.tips += argChars[0]
+                    if (!thisGame.tips.contains(argChars[0].uppercaseChar())) thisGame.tips += argChars[0].uppercaseChar()
                 }
+
 //            Thread.sleep((100..1000).random().toLong())
                 group.sendMessage(thisGame.message())
             } else if (message.content.startsWith("/answer")) {
@@ -149,11 +154,7 @@ suspend fun main() {
                 val thisGame = games.filter { it.group == group.id }[0]
                 var answer: Song? = null
                 thisGame.songLib.forEach {
-                    if (it.name.uppercase(Locale.getDefault()) ==
-                        message.content.uppercase(Locale.getDefault())
-                        && (!thisGame.discovered.contains(it))
-                    )
-                        answer = it
+                    if (check(message.content, it.name) && (!thisGame.discovered.contains(it))) answer = it
                 }
                 if (answer != null) {
                     thisGame.discovered += answer!!

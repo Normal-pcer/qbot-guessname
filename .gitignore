@@ -12,6 +12,7 @@ out/
 .springBeans
 .sts4-cache
 bin/
+src/main/kotlin/WhiteList.kt
 !**/src/main/**/bin/
 !**/src/test/**/bin/
 
