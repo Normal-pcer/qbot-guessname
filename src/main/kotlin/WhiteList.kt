@@ -1,1 +1,1 @@
-val whiteListGroup = mutableListOf(871044615L)
+val whiteListGroup = mutableListOf(871044615L, 853072230L)
